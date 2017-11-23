@@ -79,5 +79,6 @@ protected:
     Eigen::VectorXd jnt_trq_command_;
     
     Eigen::Vector3d gravity_;
+    std::string model_name_;
 };
 

@@ -3,13 +3,14 @@ using namespace RTT;
 
 RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
 : TaskContext(name)
+, model_name_(name)
 {
     this->provides("command")->addPort("JointTorque",port_jnt_trq_in_);
     this->provides("state")->addPort("JointTorque",port_jnt_trq_out_);
     this->provides("state")->addPort("JointPosition",port_jnt_pos_out_);
     this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
     this->provides("state")->addOperation("print",&RttGazeboRobotInterface::printState,this,RTT::OwnThread);
-    
+    this->addProperty("model_name",model_name_).doc("The name of the model to load");
     this->addOperation("setModelConfiguration",&RttGazeboRobotInterface::setModelConfiguration,this,RTT::OwnThread);
     
     this->provides("world")->addPort("Gravity",port_gravity_out_);
@@ -38,7 +39,6 @@ void RttGazeboRobotInterface::printState()
     }
 }
 
-
 Eigen::Vector3d RttGazeboRobotInterface::getGravity()
 {
     return gravity_;
@@ -46,7 +46,6 @@ Eigen::Vector3d RttGazeboRobotInterface::getGravity()
 
 bool RttGazeboRobotInterface::setModelConfiguration(std::vector<std::string> joint_names,std::vector<double> joint_positions)
 {
-
     if (!gazebo_model_)
     {
         log(Error) << "[" << getName() << "] " << "Model is not loaded" << endlog();
@@ -91,12 +90,12 @@ bool RttGazeboRobotInterface::configureHook()
         return false;
     }
     
-    log(Info) << "[" << getName() << "] " << " World loaded, getting model " << getName() << endlog();
-    gazebo_model_ = world->ModelByName( getName() );
+    log(Info) << "[" << getName() << "] " << " World loaded, getting model " << model_name_ << endlog();
+    gazebo_model_ = world->ModelByName( model_name_ );
     
     if(! gazebo_model_)
     {
-        log(Error) << "[" << getName() << "] " << "Could not get gazebo model " << getName() << ". Make sure it is loaded in the server" << endlog();
+        log(Error) << "[" << getName() << "] " << "Could not get gazebo model " << model_name_ << ". Make sure it is loaded in the server" << endlog();
         return false;
     }
     
@@ -120,7 +119,7 @@ bool RttGazeboRobotInterface::configureHook()
     
     if(joint_map_.size() == 0)
     {
-        log(Error) << "[" << getName() << "] " << "Could not get any actuated joint for model " << getName() << endlog();
+        log(Error) << "[" << getName() << "] " << "Could not get any actuated joint for model " << model_name_ << endlog();
         return false;
     }
     
