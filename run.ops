@@ -1,0 +1,12 @@
+#!/usr/bin/env deployer
+
+import("rtt_gazebo_robot_interface")
+loadComponent("rtt_gazebo_robot_interface","RttGazeboRobotInterface")
+setActivity("rtt_gazebo_robot_interface",0.01,10,ORO_SCHED_RT)
+
+configureComponent("rtt_gazebo_robot_interface")
+startComponent("rtt_gazebo_robot_interface")
+
+var string a = rtt_gazebo_robot_interface.SomeAsyncOperation("super test")
+rtt_gazebo_robot_interface.SomeSyncOperation(1,"super test 2")
+

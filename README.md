@@ -1,1 +1,3 @@
-rtt_gazebo_robot_interface
+RTT Gazebo Default Robot Interface
+==================================
+
