@@ -53,12 +53,15 @@ public:
     void updateHook();
     void worldUpdateBegin();
     void worldUpdateEnd();
+    int getNrOfDegreesOfFreedom();
+    Eigen::Vector3d getGravity();
 protected:
     // RTT interface
     RTT::InputPort<Eigen::VectorXd>   port_jnt_trq_in_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_pos_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_vel_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_out_;
+    RTT::OutputPort<Eigen::Vector3d>  port_gravity_out_;
     
     // Gazebo 
     std::vector<std::string> joint_map_;
@@ -72,5 +75,7 @@ protected:
     Eigen::VectorXd current_jnt_trq_;
     // Command
     Eigen::VectorXd jnt_trq_command_;
+    
+    Eigen::Vector3d gravity_;
 };
 
