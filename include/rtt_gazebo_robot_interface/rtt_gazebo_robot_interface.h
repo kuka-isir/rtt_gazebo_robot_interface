@@ -55,6 +55,7 @@ public:
     void worldUpdateEnd();
     int getNrOfDegreesOfFreedom();
     Eigen::Vector3d getGravity();
+    void printState();
 protected:
     // RTT interface
     RTT::InputPort<Eigen::VectorXd>   port_jnt_trq_in_;

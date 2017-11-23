@@ -5,9 +5,10 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
 : TaskContext(name)
 {
     this->provides("command")->addPort("JointTorque",port_jnt_trq_in_);
-    this->provides("state")->addPort("JointTorque",port_jnt_trq_in_);
-    this->provides("state")->addPort("JointPosition",port_jnt_trq_in_);
-    this->provides("state")->addPort("JointVelocity",port_jnt_trq_in_);
+    this->provides("state")->addPort("JointTorque",port_jnt_trq_out_);
+    this->provides("state")->addPort("JointPosition",port_jnt_pos_out_);
+    this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
+    this->provides("state")->addOperation("print",&RttGazeboRobotInterface::printState,this,RTT::OwnThread);
     
     this->provides("world")->addPort("Gravity",port_gravity_out_);
     this->provides("world")->addOperation("getGravity",&RttGazeboRobotInterface::getGravity,this,RTT::OwnThread);
@@ -18,6 +19,17 @@ int RttGazeboRobotInterface::getNrOfDegreesOfFreedom()
 {
     return joint_map_.size();
 }
+
+void RttGazeboRobotInterface::printState()
+{
+    std::cout << "JointPosition : " << '\n';
+    std::cout << current_jnt_pos_.transpose() << '\n';
+    std::cout << "JointVelocity : " << '\n';
+    std::cout << current_jnt_vel_.transpose() << '\n';
+    std::cout << "JointTorque : " << '\n';
+    std::cout << current_jnt_trq_.transpose() << '\n';
+}
+
 
 Eigen::Vector3d RttGazeboRobotInterface::getGravity()
 {
@@ -68,6 +80,7 @@ bool RttGazeboRobotInterface::configureHook()
         return false;
     }
     
+    std::cout << "Physical joints" << std::endl;
     for(auto joint_name : joint_map_)
     {
         std::cout << "   - " << joint_name << std::endl;

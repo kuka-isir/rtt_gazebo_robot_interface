@@ -1,5 +1,7 @@
 #!/usr/bin/env deployer
 
+import("eigen_typekit")
+
 var string urdf = "/home/hoarau/isir/orca_ws/src/orca/examples/lwr.urdf"
 var string base_frame = "link_0"
 
@@ -8,21 +10,16 @@ loadComponent("gazebo","RTTGazeboEmbedded")
 setActivity("gazebo",0,10,ORO_SCHED_OTHER)
 gazebo.argv = strings("--verbose")
 gazebo.world_path = "worlds/empty.world"
-
-# gazebo.add_plugin("libgazebo_ros_paths_plugin.so")
-# gazebo.add_plugin("libgazebo_ros_api_plugin.so")
-
 gazebo.configure()
 gazebo.insertModelFromURDF( urdf )
 gazebo.start()
 
 import("rtt_gazebo_robot_interface")
-loadComponent("rtt_gazebo_robot_interface","RttGazeboRobotInterface")
-setActivity("rtt_gazebo_robot_interface",0.01,10,ORO_SCHED_RT)
+loadComponent("lwr","RttGazeboRobotInterface")
+setActivity("lwr",0,10,ORO_SCHED_RT)
 
-configureComponent("rtt_gazebo_robot_interface")
-startComponent("rtt_gazebo_robot_interface")
+configureComponent("lwr")
+startComponent("lwr")
 
-var string a = rtt_gazebo_robot_interface.SomeAsyncOperation("super test")
-rtt_gazebo_robot_interface.SomeSyncOperation(1,"super test 2")
+
 
