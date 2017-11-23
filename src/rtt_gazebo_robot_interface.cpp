@@ -10,6 +10,8 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
     this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
     this->provides("state")->addOperation("print",&RttGazeboRobotInterface::printState,this,RTT::OwnThread);
     
+    this->addOperation("setModelConfiguration",&RttGazeboRobotInterface::setModelConfiguration,this,RTT::OwnThread);
+    
     this->provides("world")->addPort("Gravity",port_gravity_out_);
     this->provides("world")->addOperation("getGravity",&RttGazeboRobotInterface::getGravity,this,RTT::OwnThread);
     this->addOperation("getNrOfDegreesOfFreedom",&RttGazeboRobotInterface::getNrOfDegreesOfFreedom,this,RTT::OwnThread);
@@ -22,12 +24,18 @@ int RttGazeboRobotInterface::getNrOfDegreesOfFreedom()
 
 void RttGazeboRobotInterface::printState()
 {
+    std::cout << "Model " << getName() << '\n';
     std::cout << "JointPosition : " << '\n';
     std::cout << current_jnt_pos_.transpose() << '\n';
     std::cout << "JointVelocity : " << '\n';
     std::cout << current_jnt_vel_.transpose() << '\n';
     std::cout << "JointTorque : " << '\n';
     std::cout << current_jnt_trq_.transpose() << '\n';
+    std::cout << "Physical joints" << std::endl;
+    for(auto joint_name : joint_map_)
+    {
+        std::cout << "   - " << joint_name << std::endl;
+    }
 }
 
 
@@ -35,6 +43,42 @@ Eigen::Vector3d RttGazeboRobotInterface::getGravity()
 {
     return gravity_;
 }
+
+bool RttGazeboRobotInterface::setModelConfiguration(std::vector<std::string> joint_names,std::vector<double> joint_positions)
+{
+
+    if (!gazebo_model_)
+    {
+        log(Error) << "[" << getName() << "] " << "Model is not loaded" << endlog();
+        return false;
+    }
+
+    if (joint_names.size() != joint_positions.size())
+    {
+        printState();
+        log(Error) << "[" << getName() << "] " << "joint_names lenght should be the same as joint_positions : " << joint_names.size() << " vs " << joint_positions.size() << endlog();
+        return false;
+    }
+    
+    auto world = gazebo::physics::get_world();
+    // make the service call to pause gazebo
+    bool is_paused = world->IsPaused();
+    if (!is_paused) world->SetPaused(true);
+
+    std::map<std::string, double> joint_position_map;
+    for (unsigned int i = 0; i < joint_names.size(); i++)
+    {
+      joint_position_map[joint_names[i]] = joint_positions[i];
+    }
+    
+    gazebo_model_->SetJointPositions(joint_position_map);
+
+    // resume paused state before this call
+    world->SetPaused(is_paused);
+
+    return true;
+}
+
 
 bool RttGazeboRobotInterface::configureHook()
 {

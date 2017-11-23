@@ -56,6 +56,7 @@ public:
     int getNrOfDegreesOfFreedom();
     Eigen::Vector3d getGravity();
     void printState();
+    bool setModelConfiguration(std::vector<std::string> joint_names,std::vector<double> joint_positions);
 protected:
     // RTT interface
     RTT::InputPort<Eigen::VectorXd>   port_jnt_trq_in_;

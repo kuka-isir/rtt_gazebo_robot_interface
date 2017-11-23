@@ -18,8 +18,10 @@ import("rtt_gazebo_robot_interface")
 loadComponent("lwr","RttGazeboRobotInterface")
 setActivity("lwr",0,10,ORO_SCHED_RT)
 
-configureComponent("lwr")
-startComponent("lwr")
+lwr.configure()
 
+lwr.setModelConfiguration(strings("joint_0","joint_1","joint_3","joint_5"),array(-2.2,-0.1,1.47,-1.47))
+
+lwr.start()
 
 
