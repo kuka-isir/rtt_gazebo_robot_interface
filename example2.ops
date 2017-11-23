@@ -1,0 +1,25 @@
+#!/usr/bin/env deployer
+
+var string urdf = "lwr.urdf"
+
+import("rtt_gazebo_embedded")
+loadComponent("gazebo","RTTGazeboEmbedded")
+setActivity("gazebo",0,10,ORO_SCHED_OTHER)
+gazebo.argv = strings("--verbose")
+gazebo.world_path = "worlds/empty.world"
+gazebo.configure()
+gazebo.insertModelFromURDF( urdf )
+gazebo.start()
+
+import("rtt_gazebo_robot_interface")
+loadComponent("robot","RttGazeboRobotInterface")
+setActivity("robot",0,10,ORO_SCHED_RT)
+
+robot.model_name = "lwr"
+robot.configure()
+
+robot.setModelConfiguration(strings("joint_0","joint_1","joint_3","joint_5"),array(-2.2,-0.1,1.47,-1.47))
+
+robot.start()
+
+

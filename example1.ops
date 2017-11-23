@@ -1,9 +1,6 @@
 #!/usr/bin/env deployer
 
-import("eigen_typekit")
-
-var string urdf = "/home/hoarau/isir/orca_ws/src/orca/examples/lwr.urdf"
-var string base_frame = "link_0"
+var string urdf = "lwr.urdf"
 
 import("rtt_gazebo_embedded")
 loadComponent("gazebo","RTTGazeboEmbedded")
