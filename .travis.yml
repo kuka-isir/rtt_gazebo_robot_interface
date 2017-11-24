@@ -11,6 +11,14 @@ env:
     - ROS_DISTRO="indigo"
     - ROS_DISTRO="jade"
     - ROS_DISTRO="kinetic"
+    
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports # cmake 3.2.3 / doxygen 1.8.3
+    packages:
+      - cmake
+      - cmake-data
 
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
