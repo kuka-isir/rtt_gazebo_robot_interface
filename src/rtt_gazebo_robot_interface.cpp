@@ -1,4 +1,5 @@
 #include "rtt_gazebo_robot_interface/rtt_gazebo_robot_interface.h"
+#include <cmath>
 using namespace RTT;
 
 RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
@@ -106,15 +107,24 @@ bool RttGazeboRobotInterface::configureHook()
         // Not adding fixed joints
         if(joint->GetType() != gazebo::physics::Joint::FIXED_JOINT 
             && joint->GetLowerLimit(0u) != joint->GetUpperLimit(0u)
-            && joint->GetLowerLimit(0u) != 0)
+            && joint->GetLowerLimit(0u).Radian() != 0
+            && !std::isnan(joint->GetLowerLimit(0u).Radian())
+            && !std::isnan(joint->GetUpperLimit(0u).Radian()))
         {
-            log(Info) << "[" << getName() << "] " << " Adding joint " << joint->GetName() << endlog();
+            log(Info) << "[" << getName() << "] " << " Adding joint " << joint->GetName() 
+                      << " type " << joint->GetType() 
+                      << " lower limit " << joint->GetLowerLimit(0u)
+                      << " upper limit " << joint->GetUpperLimit(0u)
+                      << endlog();
             joint_map_.push_back(joint->GetName());
         }
         else
         {
-            log(Info) << "[" << getName() << "] " << " Not adding joint " << joint->GetName() << endlog();
-        }
+            log(Info) << "[" << getName() << "] " << " Not adding joint " << joint->GetName() 
+                      << " type " << joint->GetType() 
+                      << " lower limit " << joint->GetLowerLimit(0u)
+                      << " upper limit " << joint->GetUpperLimit(0u)
+                      << endlog();        }
     }
     
     if(joint_map_.size() == 0)
