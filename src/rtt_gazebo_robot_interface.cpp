@@ -92,7 +92,7 @@ bool RttGazeboRobotInterface::configureHook()
     }
     
     log(Info) << "[" << getName() << "] " << " World loaded, getting model " << model_name_ << endlog();
-    gazebo_model_ = world->ModelByName( model_name_ );
+    gazebo_model_ = world->GetModel( model_name_ );
     
     if(! gazebo_model_)
     {

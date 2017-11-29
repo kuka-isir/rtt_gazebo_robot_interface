@@ -48,7 +48,7 @@
 class RttGazeboRobotInterface : public RTT::TaskContext
 {
 public:
-    RttGazeboRobotInterface(const string& name);
+    RttGazeboRobotInterface(const std::string& name);
     bool configureHook();
     void updateHook();
     void worldUpdateBegin();
