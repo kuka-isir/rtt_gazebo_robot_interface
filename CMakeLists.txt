@@ -29,7 +29,7 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    list(APPEND CMAKE_CXX_FLAGS "-fext-numeric-literals")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals")
 endif()
 
 find_package(OROCOS-RTT REQUIRED ${RTT_HINTS})
