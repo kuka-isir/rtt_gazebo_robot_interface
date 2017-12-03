@@ -43,7 +43,7 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
 // Eigen
-#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 class RttGazeboRobotInterface : public RTT::TaskContext
 {
@@ -64,6 +64,8 @@ protected:
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_vel_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_out_;
     RTT::OutputPort<Eigen::Vector3d>  port_gravity_out_;
+    RTT::OutputPort<Eigen::Matrix<double,6,1> >  port_base_vel_out_;
+    RTT::OutputPort<Eigen::Matrix4d>  port_world_to_base_out_;
     
     // Gazebo 
     std::vector<std::string> joint_map_;
@@ -79,6 +81,9 @@ protected:
     Eigen::VectorXd jnt_trq_command_;
     
     Eigen::Vector3d gravity_;
+    Eigen::Matrix<double,6,1> current_base_vel_;
+    Eigen::Affine3d current_world_to_base_;
+    
     std::string model_name_;
 };
 

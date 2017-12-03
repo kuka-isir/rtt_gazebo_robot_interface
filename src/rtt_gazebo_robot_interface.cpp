@@ -10,11 +10,14 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
     this->provides("state")->addPort("JointTorque",port_jnt_trq_out_);
     this->provides("state")->addPort("JointPosition",port_jnt_pos_out_);
     this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
+    this->provides("state")->addPort("WorldToBase",port_world_to_base_out_);
+    this->provides("state")->addPort("BaseVelocity",port_base_vel_out_);
+    this->provides("state")->addPort("Gravity",port_gravity_out_);
+    
     this->provides("state")->addOperation("print",&RttGazeboRobotInterface::printState,this,RTT::OwnThread);
     this->addProperty("model_name",model_name_).doc("The name of the model to load");
     this->addOperation("setModelConfiguration",&RttGazeboRobotInterface::setModelConfiguration,this,RTT::OwnThread);
     
-    this->provides("world")->addPort("Gravity",port_gravity_out_);
     this->provides("world")->addOperation("getGravity",&RttGazeboRobotInterface::getGravity,this,RTT::OwnThread);
     this->addOperation("getNrOfDegreesOfFreedom",&RttGazeboRobotInterface::getNrOfDegreesOfFreedom,this,RTT::OwnThread);
 }
@@ -156,14 +159,6 @@ bool RttGazeboRobotInterface::configureHook()
 
 void RttGazeboRobotInterface::worldUpdateBegin()
 {
-    auto world = gazebo::physics::get_world();
-    
-    
-    gravity_[0] = world->GetPhysicsEngine()->GetGravity()[0];
-    gravity_[1] = world->GetPhysicsEngine()->GetGravity()[1];
-    gravity_[2] = world->GetPhysicsEngine()->GetGravity()[2];
-    
-    port_gravity_out_.write(gravity_);
     
     if(port_jnt_trq_in_.readNewest(jnt_trq_command_) != RTT::NoData)
     {
@@ -185,10 +180,13 @@ void RttGazeboRobotInterface::worldUpdateBegin()
 
 void RttGazeboRobotInterface::worldUpdateEnd()
 {
+    
     if(!isRunning())
     {
         return;
     }
+    
+    auto world = gazebo::physics::get_world();
     
     for(int i=0 ; i < joint_map_.size() ; ++i)
     {
@@ -197,6 +195,30 @@ void RttGazeboRobotInterface::worldUpdateEnd()
         current_jnt_vel_[i] = joint->GetVelocity(0);
         current_jnt_trq_[i] = joint->GetForce(0u);
     }
+    
+
+    auto pose = gazebo_model_->GetRelativePose();
+    current_world_to_base_.translation() = Eigen::Vector3d(pose.pos.x,pose.pos.y,pose.pos.z);
+    current_world_to_base_.linear() = Eigen::Quaterniond(pose.rot.w,pose.rot.x,pose.rot.y,pose.rot.z).toRotationMatrix();
+
+    auto base_vel_lin = gazebo_model_->GetRelativeLinearVel();
+    auto base_vel_ang = gazebo_model_->GetRelativeAngularVel();
+    current_base_vel_[0] = base_vel_lin.x;
+    current_base_vel_[1] = base_vel_lin.y;
+    current_base_vel_[2] = base_vel_lin.z;
+    current_base_vel_[3] = base_vel_ang.x;
+    current_base_vel_[4] = base_vel_ang.y;
+    current_base_vel_[5] = base_vel_ang.z;
+    
+    auto grav = world->GetPhysicsEngine()->GetGravity();
+    
+    gravity_[0] = grav[0];
+    gravity_[1] = grav[1];
+    gravity_[2] = grav[2];
+    
+    port_gravity_out_.write(gravity_);
+    port_base_vel_out_.write(current_base_vel_);
+    port_world_to_base_out_.write(current_world_to_base_.matrix());
     port_jnt_pos_out_.write(current_jnt_pos_);
     port_jnt_vel_out_.write(current_jnt_vel_);
     port_jnt_trq_out_.write(current_jnt_trq_);
