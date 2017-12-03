@@ -105,7 +105,10 @@ bool RttGazeboRobotInterface::configureHook()
     for(auto joint : gazebo_model_->GetJoints() )
     {
         // Not adding fixed joints
-        if(joint->GetType() != gazebo::physics::Joint::FIXED_JOINT 
+        if( true
+#if GAZEBO_VERSION_MAJOR >= 7
+            && joint->GetType() != gazebo::physics::Joint::FIXED_JOINT
+#endif
             && joint->GetLowerLimit(0u) != joint->GetUpperLimit(0u)
             && joint->GetLowerLimit(0u).Radian() != 0
             && !std::isnan(joint->GetLowerLimit(0u).Radian())
