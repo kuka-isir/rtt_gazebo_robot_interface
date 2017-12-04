@@ -3,8 +3,6 @@ project(rtt_gazebo_robot_interface)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-add_definitions("-std=c++11")
-
 find_package(catkin QUIET)
 
 find_package(Eigen3 QUIET)
@@ -27,12 +25,12 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 find_package(gazebo REQUIRED)
 include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
-list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 add_definitions(-DGAZEBO_VERSION_MAJOR=${gazebo_VERSION_MAJOR})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals")
+    add_definitions(-fext-numeric-literals)
 endif()
 
 find_package(OROCOS-RTT REQUIRED ${RTT_HINTS})
