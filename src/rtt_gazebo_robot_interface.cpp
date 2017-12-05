@@ -8,6 +8,7 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
 {
     this->provides("command")->addPort("JointTorque",port_jnt_trq_in_);
     this->provides("state")->addPort("JointTorque",port_jnt_trq_out_);
+    this->provides("state")->addPort("JointGravityTorque",port_jnt_grav_trq_out_);
     this->provides("state")->addPort("JointPosition",port_jnt_pos_out_);
     this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
     this->provides("state")->addPort("WorldToBase",port_world_to_base_out_);
@@ -17,6 +18,8 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
     this->provides("state")->addOperation("print",&RttGazeboRobotInterface::printState,this,RTT::OwnThread);
     this->addProperty("model_name",model_name_).doc("The name of the model to load");
     this->addOperation("setModelConfiguration",&RttGazeboRobotInterface::setModelConfiguration,this,RTT::OwnThread);
+    this->addOperation("setURDFString",&RttGazeboRobotInterface::setURDFString,this,RTT::OwnThread);
+    this->addOperation("enableGravityCompensation",&RttGazeboRobotInterface::enableGravityCompensation,this,RTT::OwnThread);
 
     this->provides("world")->addOperation("getGravity",&RttGazeboRobotInterface::getGravity,this,RTT::OwnThread);
     this->addOperation("getNrOfDegreesOfFreedom",&RttGazeboRobotInterface::getNrOfDegreesOfFreedom,this,RTT::OwnThread);
@@ -25,6 +28,11 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
 int RttGazeboRobotInterface::getNrOfDegreesOfFreedom()
 {
     return joint_map_.size();
+}
+
+void RttGazeboRobotInterface::enableGravityCompensation(bool enable_gravity_compensation)
+{
+    this->grav_comp_ = enable_gravity_compensation;
 }
 
 void RttGazeboRobotInterface::printState()
@@ -82,6 +90,10 @@ bool RttGazeboRobotInterface::setModelConfiguration(std::vector<std::string> joi
     return true;
 }
 
+void RttGazeboRobotInterface::setURDFString(const std::string& urdf_str)
+{
+    this->urdf_str_ = urdf_str;
+}
 
 bool RttGazeboRobotInterface::configureHook()
 {
@@ -145,12 +157,52 @@ bool RttGazeboRobotInterface::configureHook()
         std::cout << "   - " << joint_name << std::endl;
     }
 
-    current_jnt_pos_.setZero(joint_map_.size());
-    current_jnt_vel_.setZero(joint_map_.size());
-    current_jnt_trq_.setZero(joint_map_.size());
-    jnt_trq_command_.setZero(joint_map_.size());
+    const int ndof = joint_map_.size();
 
-    log(Info) << "[" << getName() << "] " << " Connecting Gazebo events" << endlog();
+    current_jnt_pos_.setZero(ndof);
+    current_jnt_vel_.setZero(ndof);
+    current_jnt_trq_.setZero(ndof);
+    jnt_trq_command_.setZero(ndof);
+
+    kdl_joints_.resize(ndof);
+    kdl_joint_gravity_.resize(ndof);
+    KDL::SetToZero(kdl_joint_gravity_);
+
+
+    if(!urdf_str_.empty())
+    {
+        log(Info) << "[" << getName() << "] " << "Creating KDL Tree" << endlog();
+        if (!kdl_parser::treeFromString(urdf_str_, kdl_tree_))
+        {
+            log(Error) << "[" << getName() << "] " << "Failed to construct kdl tree" << endlog();
+            return false;
+        }
+
+
+        KDL::Chain kdl_chain;
+
+        const KDL::SegmentMap& segments(kdl_tree_.getSegments());
+
+        auto gazebo_links = gazebo_model_->GetLinks();
+
+        std::string root_link = gazebo_links[0]->GetName();
+        std::string tip_link = gazebo_links[ gazebo_links.size() - 1 ]->GetName();
+
+        if(!kdl_tree_.getChain(root_link, tip_link, kdl_chain))
+        {
+            log(Error) << "[" << getName() << "] " << "Failed to build the KDL chain with params :\n  root_link: [" << root_link.c_str() << "]\n  tip_link: [" << tip_link.c_str() << "]" << endlog();
+            return false;
+        }
+
+        auto grav = world->GetPhysicsEngine()->GetGravity();
+        KDL::Vector kdl_grav(grav[0],grav[1],grav[2]);
+
+        grav_solver_ = std::make_shared<KDL::ChainDynParam>(kdl_chain,kdl_grav);
+        log(Info) << "[" << getName() << "] " << "Created KDL chain with " << kdl_chain.getNrOfJoints() << " joints, with params :\n  root_link: [" << root_link.c_str() << "]\n  tip_link: [" << tip_link.c_str() << "]" << endlog();
+    }
+
+
+    log(Info) << "[" << getName() << "] " << "Connecting Gazebo events" << endlog();
     gazebo_world_begin_connection_ = gazebo::event::Events::ConnectWorldUpdateBegin(std::bind(&RttGazeboRobotInterface::worldUpdateBegin,this));
     gazebo_world_end_connection_   = gazebo::event::Events::ConnectWorldUpdateEnd(std::bind(&RttGazeboRobotInterface::worldUpdateEnd,this));
 
@@ -177,7 +229,7 @@ void RttGazeboRobotInterface::worldUpdateBegin()
         for(int i=0 ; i < joint_map_.size() ; ++i)
         {
             auto joint = gazebo_model_->GetJoint( joint_map_[i] );
-            joint->SetForce(0,jnt_trq_command_[i]);
+            joint->SetForce(0,jnt_trq_command_[i] + (grav_comp_ ? kdl_joint_gravity_(i) : 0.0 ) );
         }
     }
     else
@@ -209,7 +261,12 @@ void RttGazeboRobotInterface::worldUpdateEnd()
         current_jnt_pos_[i] = joint->GetAngle(0).Radian();
         current_jnt_vel_[i] = joint->GetVelocity(0);
         current_jnt_trq_[i] = joint->GetForce(0u);
+        kdl_joints_(i) = current_jnt_pos_[i];
     }
+
+    if(grav_solver_)
+        grav_solver_->JntToGravity(kdl_joints_,kdl_joint_gravity_);
+    current_jnt_grav_trq_ = kdl_joint_gravity_.data;
 
 
     auto pose = gazebo_model_->GetRelativePose();
@@ -237,6 +294,7 @@ void RttGazeboRobotInterface::worldUpdateEnd()
     port_jnt_pos_out_.write(current_jnt_pos_);
     port_jnt_vel_out_.write(current_jnt_vel_);
     port_jnt_trq_out_.write(current_jnt_trq_);
+    port_jnt_grav_trq_out_.write(current_jnt_grav_trq_);
 }
 
 void RttGazeboRobotInterface::updateHook()
