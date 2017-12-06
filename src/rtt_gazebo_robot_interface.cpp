@@ -8,6 +8,7 @@ RttGazeboRobotInterface::RttGazeboRobotInterface(const std::string& name)
 {
     this->provides("command")->addPort("JointTorque",port_jnt_trq_in_);
     this->provides("state")->addPort("JointTorque",port_jnt_trq_out_);
+    this->provides("state")->addPort("JointTorqueAct",port_jnt_trq_act_out_);
     this->provides("state")->addPort("JointGravityTorque",port_jnt_grav_trq_out_);
     this->provides("state")->addPort("JointPosition",port_jnt_pos_out_);
     this->provides("state")->addPort("JointVelocity",port_jnt_vel_out_);
@@ -260,7 +261,8 @@ void RttGazeboRobotInterface::worldUpdateEnd()
         auto joint = gazebo_model_->GetJoint( joint_map_[i] );
         current_jnt_pos_[i] = joint->GetAngle(0).Radian();
         current_jnt_vel_[i] = joint->GetVelocity(0);
-        current_jnt_trq_[i] = joint->GetForce(0u);
+        current_jnt_trq_[i] = joint->GetForce(0u); // WARNING: This is the external estimated force
+
         kdl_joints_(i) = current_jnt_pos_[i];
     }
 
@@ -293,8 +295,13 @@ void RttGazeboRobotInterface::worldUpdateEnd()
     port_world_to_base_out_.write(current_world_to_base_.matrix());
     port_jnt_pos_out_.write(current_jnt_pos_);
     port_jnt_vel_out_.write(current_jnt_vel_);
-    port_jnt_trq_out_.write(current_jnt_trq_);
+    port_jnt_trq_out_.write(jnt_trq_command_);
+    port_jnt_trq_act_out_.write(jnt_trq_command_ - current_jnt_grav_trq_);
     port_jnt_grav_trq_out_.write(current_jnt_grav_trq_);
+
+    //std::cout << "GZ current_jnt_trq_      " << current_jnt_trq_.transpose() << std::endl;
+    //std::cout << "GZ current_jnt_trq_qct_  " << (current_jnt_trq_ - current_jnt_grav_trq_).transpose() << std::endl;
+    //std::cout << "GZ current_jnt_grav_trq_ " << current_jnt_grav_trq_.transpose() << std::endl;
 }
 
 void RttGazeboRobotInterface::updateHook()

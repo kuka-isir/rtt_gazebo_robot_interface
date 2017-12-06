@@ -75,6 +75,7 @@ protected:
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_pos_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_vel_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_out_;
+    RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_act_out_;
     RTT::OutputPort<Eigen::Vector3d>  port_gravity_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_grav_trq_out_;
     RTT::OutputPort<Eigen::Matrix<double,6,1> >  port_base_vel_out_;
