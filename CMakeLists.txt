@@ -3,9 +3,8 @@ project(rtt_gazebo_robot_interface)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-add_definitions("-std=c++11")
-
-find_package(catkin QUIET)
+find_package(catkin QUIET COMPONENTS kdl_parser)
+find_package(orocos_kdl REQUIRED)
 
 find_package(Eigen3 QUIET)
 if(NOT Eigen3_FOUND)
@@ -22,17 +21,17 @@ if(NOT Eigen3_FOUND)
 endif()
 
 
-include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${EIGEN3_INCLUDE_DIR} ${orocos_kdl_INCLUDE_DIRS})
 
 find_package(gazebo REQUIRED)
 include_directories(${GAZEBO_INCLUDE_DIRS})
 link_directories(${GAZEBO_LIBRARY_DIRS})
-list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 add_definitions(-DGAZEBO_VERSION_MAJOR=${gazebo_VERSION_MAJOR})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fext-numeric-literals")
+    add_definitions(-fext-numeric-literals)
 endif()
 
 find_package(OROCOS-RTT REQUIRED ${RTT_HINTS})
@@ -45,6 +44,6 @@ include_directories(
 )
 
 orocos_component(rtt_gazebo_robot_interface src/rtt_gazebo_robot_interface.cpp)
-target_link_libraries(rtt_gazebo_robot_interface ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
+target_link_libraries(rtt_gazebo_robot_interface ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} ${orocos_kdl_LIBRARIES})
 
 orocos_generate_package()

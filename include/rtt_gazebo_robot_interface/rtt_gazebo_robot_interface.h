@@ -45,6 +45,10 @@
 // Eigen
 #include <Eigen/Geometry>
 
+#include <kdl/jntarray.hpp>
+#include <kdl/chaindynparam.hpp>
+#include <kdl_parser/kdl_parser.hpp>
+
 class RttGazeboRobotInterface : public RTT::TaskContext
 {
 public:
@@ -57,17 +61,27 @@ public:
     Eigen::Vector3d getGravity();
     void printState();
     bool setModelConfiguration(std::vector<std::string> joint_names,std::vector<double> joint_positions);
+    void setURDFString(const std::string& urdf_str);
+    void enableGravityCompensation(bool enable_gravity_compensation);
 protected:
+    std::string urdf_str_;
+    KDL::Tree kdl_tree_;
+    std::shared_ptr<KDL::ChainDynParam> grav_solver_;
+    KDL::JntArray kdl_joints_;
+    KDL::JntArray kdl_joint_gravity_;
+    bool grav_comp_ = false;
     // RTT interface
     RTT::InputPort<Eigen::VectorXd>   port_jnt_trq_in_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_pos_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_vel_out_;
     RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_out_;
+    RTT::OutputPort<Eigen::VectorXd>  port_jnt_trq_act_out_;
     RTT::OutputPort<Eigen::Vector3d>  port_gravity_out_;
+    RTT::OutputPort<Eigen::VectorXd>  port_jnt_grav_trq_out_;
     RTT::OutputPort<Eigen::Matrix<double,6,1> >  port_base_vel_out_;
     RTT::OutputPort<Eigen::Matrix4d>  port_world_to_base_out_;
-    
-    // Gazebo 
+
+    // Gazebo
     std::vector<std::string> joint_map_;
     gazebo::physics::ModelPtr gazebo_model_;
     gazebo::event::ConnectionPtr gazebo_world_end_connection_;
@@ -77,13 +91,13 @@ protected:
     Eigen::VectorXd current_jnt_pos_;
     Eigen::VectorXd current_jnt_vel_;
     Eigen::VectorXd current_jnt_trq_;
+    Eigen::VectorXd current_jnt_grav_trq_;
     // Command
     Eigen::VectorXd jnt_trq_command_;
-    
+
     Eigen::Vector3d gravity_;
     Eigen::Matrix<double,6,1> current_base_vel_;
     Eigen::Affine3d current_world_to_base_;
-    
+
     std::string model_name_;
 };
-
