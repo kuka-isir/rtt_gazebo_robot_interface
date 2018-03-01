@@ -95,8 +95,11 @@ bool RttGazeboRobotInterface::configureHook()
     }
     
     log(Info) << "[" << getName() << "] " << " World loaded, getting model " << model_name_ << endlog();
+#if GAZEBO_MAJOR_VERSION > 8
+    gazebo_model_ = world->ModelByName( model_name_ );
+#else
     gazebo_model_ = world->GetModel( model_name_ );
-    
+#endif
     if(! gazebo_model_)
     {
         log(Error) << "[" << getName() << "] " << "Could not get gazebo model " << model_name_ << ". Make sure it is loaded in the server" << endlog();
@@ -108,29 +111,39 @@ bool RttGazeboRobotInterface::configureHook()
     for(auto joint : gazebo_model_->GetJoints() )
     {
         // Not adding fixed joints
+        bool added = false;
         if( true
-#if GAZEBO_VERSION_MAJOR >= 7
+#if GAZEBO_MAJOR_VERSION >= 7
             && joint->GetType() != gazebo::physics::Joint::FIXED_JOINT
 #endif
+#if GAZEBO_MAJOR_VERSION > 8
+            && joint->LowerLimit(0u) != joint->UpperLimit(0u)
+            && joint->LowerLimit(0u) != 0
+            && !std::isnan(joint->LowerLimit(0u))
+            && !std::isnan(joint->UpperLimit(0u))
+#else
             && joint->GetLowerLimit(0u) != joint->GetUpperLimit(0u)
             && joint->GetLowerLimit(0u).Radian() != 0
             && !std::isnan(joint->GetLowerLimit(0u).Radian())
-            && !std::isnan(joint->GetUpperLimit(0u).Radian()))
+            && !std::isnan(joint->GetUpperLimit(0u).Radian())
+#endif
+        )
         {
-            log(Info) << "[" << getName() << "] " << " Adding joint " << joint->GetName() 
-                      << " type " << joint->GetType() 
-                      << " lower limit " << joint->GetLowerLimit(0u)
-                      << " upper limit " << joint->GetUpperLimit(0u)
-                      << endlog();
+
             joint_map_.push_back(joint->GetName());
+            added = true;
         }
-        else
-        {
-            log(Info) << "[" << getName() << "] " << " Not adding joint " << joint->GetName() 
-                      << " type " << joint->GetType() 
-                      << " lower limit " << joint->GetLowerLimit(0u)
-                      << " upper limit " << joint->GetUpperLimit(0u)
-                      << endlog();        }
+        log(Info) << "[" << getName() << "] " << (added ? "Adding":"Not adding") 
+            << " joint " << joint->GetName() 
+            << " type " << joint->GetType()
+#if GAZEBO_MAJOR_VERSION > 8
+            << " lower limit " << joint->LowerLimit(0u)
+            << " upper limit " << joint->UpperLimit(0u)
+#else
+            << " lower limit " << joint->GetLowerLimit(0u)
+            << " upper limit " << joint->GetUpperLimit(0u)
+#endif
+            << endlog();
     }
     
     if(joint_map_.size() == 0)
@@ -185,22 +198,41 @@ void RttGazeboRobotInterface::worldUpdateEnd()
     {
         return;
     }
-    
+#if GAZEBO_MAJOR_VERSION > 8
+    auto world = gazebo::physics::WorldPtr();
+#else
     auto world = gazebo::physics::get_world();
-    
+#endif
     for(int i=0 ; i < joint_map_.size() ; ++i)
     {
         auto joint = gazebo_model_->GetJoint( joint_map_[i] );
+#if GAZEBO_MAJOR_VERSION > 8
+        current_jnt_pos_[i] = joint->Position(0);
+#else
         current_jnt_pos_[i] = joint->GetAngle(0).Radian();
+#endif
         current_jnt_vel_[i] = joint->GetVelocity(0);
         current_jnt_trq_[i] = joint->GetForce(0u);
     }
     
+#if GAZEBO_MAJOR_VERSION > 8
+    auto pose = gazebo_model_->RelativePose();
+    current_world_to_base_.translation() = Eigen::Vector3d(pose.Pos().X(),pose.Pos().Y(),pose.Pos().Z());
+    current_world_to_base_.linear() = Eigen::Quaterniond(pose.Rot().W(),pose.Rot().X(),pose.Rot().Y(),pose.Rot().Z()).toRotationMatrix();
 
+    auto base_vel_lin = gazebo_model_->RelativeLinearVel();
+    auto base_vel_ang = gazebo_model_->RelativeAngularVel();
+    current_base_vel_[0] = base_vel_lin[0];
+    current_base_vel_[1] = base_vel_lin[1];
+    current_base_vel_[2] = base_vel_lin[2];
+    current_base_vel_[3] = base_vel_ang[0];
+    current_base_vel_[4] = base_vel_ang[1];
+    current_base_vel_[5] = base_vel_ang[2];
+#else
     auto pose = gazebo_model_->GetRelativePose();
     current_world_to_base_.translation() = Eigen::Vector3d(pose.pos.x,pose.pos.y,pose.pos.z);
     current_world_to_base_.linear() = Eigen::Quaterniond(pose.rot.w,pose.rot.x,pose.rot.y,pose.rot.z).toRotationMatrix();
-
+    
     auto base_vel_lin = gazebo_model_->GetRelativeLinearVel();
     auto base_vel_ang = gazebo_model_->GetRelativeAngularVel();
     current_base_vel_[0] = base_vel_lin.x;
@@ -209,8 +241,13 @@ void RttGazeboRobotInterface::worldUpdateEnd()
     current_base_vel_[3] = base_vel_ang.x;
     current_base_vel_[4] = base_vel_ang.y;
     current_base_vel_[5] = base_vel_ang.z;
+#endif
     
+#if GAZEBO_MAJOR_VERSION > 8
+    auto grav = world->Gravity();
+#else
     auto grav = world->GetPhysicsEngine()->GetGravity();
+#endif
     
     gravity_[0] = grav[0];
     gravity_[1] = grav[1];
