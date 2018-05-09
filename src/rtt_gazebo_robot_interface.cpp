@@ -282,6 +282,9 @@ void RttGazeboRobotInterface::worldUpdateEnd()
         kdl_joints_(i) = current_jnt_pos_[i];
     }
     
+    grav_solver_->JntToGravity(kdl_joints_,kdl_joint_gravity_);
+    current_jnt_grav_trq_ = kdl_joint_gravity_.data;
+    
 #if GAZEBO_MAJOR_VERSION > 8
     auto pose = gazebo_model_->RelativePose();
     current_world_to_base_.translation() = Eigen::Vector3d(pose.Pos().X(),pose.Pos().Y(),pose.Pos().Z());
