@@ -11,8 +11,13 @@ This package provides a default robot interface to `rtt_gazebo_embedded`.
 robot.command.JointTorque
 # Outputs
 robot.state.JointTorque
+robot.state.JointTorqueAct
+robot.state.JointGravityTorque
+robot.state.Gravity
 robot.state.JointPosition
 robot.state.JointVelocity
+robot.state.WorldToBase
+robot.state.BaseVelocity
 ```
 
 #### Usage
